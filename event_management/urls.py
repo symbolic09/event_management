@@ -21,6 +21,9 @@ Including another URLconf
 #     path('admin/', admin.site.urls),
 # ]
 
+from django.conf import settings
+from django.conf.urls.static import static
+
 from django.urls import path, include
 from event_manager.views import EventView, EventSummaryView, TicketView
 
@@ -35,4 +38,4 @@ urlpatterns = [
     path('book/', TicketView.as_view()),
     path('tickets/', TicketView.as_view()),
     path('tickets/<int:ticket_id>', TicketView.as_view()),
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

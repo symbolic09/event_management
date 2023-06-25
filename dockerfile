@@ -1,5 +1,5 @@
 # Base image
-FROM python:3.9-slim-buster
+FROM python:3.10
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -22,6 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the Django project code
 COPY . .
+
+RUN python manage.py collectstatic --noinput
 
 # Run migrations
 RUN python manage.py makemigrations
