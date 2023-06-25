@@ -45,6 +45,7 @@ class Ticket(models.Model):
     
     def as_dict(self):
         return {
+            "id": self.id,
             "event": self.event,
             "user": self.user,
             "booked_at": self.booked_at.strftime('%d-%b-%Y @ %H:%M'),

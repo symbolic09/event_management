@@ -29,14 +29,10 @@ def get_event_detail(event_id):
         return []
 
 
-def validate_booking_info(data):
-    return not Ticket.objects.filter(event__id=data.get('event')).exists() if 'event' in data.keys() else True
-
-
 def get_tickets(user, ticket_id=None):
     tickets = Ticket.objects.filter(user=user)
     if ticket_id:
-        return tickets.get(ticket_id).as_dict()
+        return tickets.get(id=ticket_id).as_dict()
     else:
         return list(tickets.values())
 
@@ -44,17 +40,22 @@ def get_tickets(user, ticket_id=None):
 @transaction.atomic
 def try_booking_ticket(user, data):
 
-    if Ticket.objects.filter(event__id=data.get('event')).exists():
+    if not Ticket.objects.filter(event__id=data.get('event'), user=user).exists():
         event = Event.objects.get(id=data.get('event'))
-        if event.available_seat:
-            event.available_seat -= 1
-            event.save()
-            Ticket.objects.create(event=event,
-                                  user=user,
-                                  booked_at=timezone.now())
-            return "BOOKED"
-        else:
+        now = timezone.now()
+
+        if not event.available_seat:
             return "NO_SEAT_AVAILABLE"
+
+        if not event.booking_start_datetime <= now <= event.booking_end_datetime:
+            return "EVENT_BOOKING_UNAVAILABLE"
+        
+        event.available_seat -= 1
+        event.save()
+        Ticket.objects.create(event=event,
+                                user=user,
+                                booked_at=now)
+        return "BOOKED"
     else:
         return "ALREADY_BOOKED"
 
@@ -63,8 +64,10 @@ def create_or_update_event(data):
     if validate_event_data(data):
         Event.objects.update_or_create(name=data.get('name'),
                                        description=data.get('description'),
-                                       booking_start_datetime=convert_to_datetime(data.get('booking_start_datetime')),
-                                       booking_end_datetime=convert_to_datetime(data.get('booking_end_datetime')),
+                                       booking_start_datetime=convert_to_datetime(
+                                           data.get('booking_start_datetime')),
+                                       booking_end_datetime=convert_to_datetime(
+                                           data.get('booking_end_datetime')),
                                        max_seat=data.get('max_seat'),
                                        available_seat=data.get('max_seat'),
                                        event_datetime=convert_to_datetime(data.get('event_datetime')))
@@ -80,8 +83,8 @@ def convert_to_datetime(data):
 
 def validate_event_data(data):
     if all(key in data.keys() and getattr(validators, value)(data[key]) for key, value in VALIDATE_EVENT_FIELDS.items()):
-        booking_start_datetime=convert_to_datetime(data.get('booking_start_datetime'))
-        booking_end_datetime=convert_to_datetime(data.get('booking_end_datetime'))
+        booking_start_datetime = convert_to_datetime(data.get('booking_start_datetime'))
+        booking_end_datetime = convert_to_datetime(data.get('booking_end_datetime'))
         return booking_end_datetime > booking_start_datetime
     else:
         return False
